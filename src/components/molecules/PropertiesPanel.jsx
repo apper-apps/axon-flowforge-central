@@ -1,16 +1,17 @@
 import React, { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { SketchPicker } from 'react-color'
 import Input from '@/components/atoms/Input'
 import Button from '@/components/atoms/Button'
 import ApperIcon from '@/components/ApperIcon'
-
 const PropertiesPanel = ({ selectedNode, onNodeUpdate, onClose }) => {
   const [nodeData, setNodeData] = useState({
     label: '',
     type: 'process',
-    description: ''
+    description: '',
+    color: '#3b82f6'
   })
-
+  const [showColorPicker, setShowColorPicker] = useState(false)
   const nodeTypes = [
     { value: 'start', label: 'Start/End', icon: 'Play', color: '#10b981' },
     { value: 'process', label: 'Process', icon: 'Box', color: '#3b82f6' },
@@ -19,12 +20,13 @@ const PropertiesPanel = ({ selectedNode, onNodeUpdate, onClose }) => {
     { value: 'connector', label: 'Connector', icon: 'Circle', color: '#6b7280' }
   ]
 
-  useEffect(() => {
+useEffect(() => {
     if (selectedNode) {
       setNodeData({
         label: selectedNode.label || '',
         type: selectedNode.type || 'process',
-        description: selectedNode.description || ''
+        description: selectedNode.description || '',
+        color: selectedNode.color || '#3b82f6'
       })
     }
   }, [selectedNode])
@@ -36,11 +38,15 @@ const PropertiesPanel = ({ selectedNode, onNodeUpdate, onClose }) => {
     }
   }
 
-  const handleDelete = () => {
+const handleDelete = () => {
     if (selectedNode && window.confirm('Are you sure you want to delete this node?')) {
-      // This would need to be implemented in the parent component
+      onNodeUpdate(selectedNode.id, { ...selectedNode, _delete: true })
       onClose()
     }
+  }
+
+  const handleColorChange = (color) => {
+    setNodeData(prev => ({ ...prev, color: color.hex }))
   }
 
   if (!selectedNode) return null
@@ -116,6 +122,39 @@ const PropertiesPanel = ({ selectedNode, onNodeUpdate, onClose }) => {
                     )}
                   </motion.button>
                 ))}
+</div>
+            </div>
+
+            <div>
+              <label className="label">Shape Color</label>
+              <div className="relative">
+                <button
+                  type="button"
+                  onClick={() => setShowColorPicker(!showColorPicker)}
+                  className="w-full flex items-center justify-between p-3 border-2 border-gray-200 rounded-lg hover:border-gray-300 transition-colors"
+                >
+                  <div className="flex items-center space-x-3">
+                    <div
+                      className="w-6 h-6 rounded-full border-2 border-gray-300"
+                      style={{ backgroundColor: nodeData.color }}
+                    />
+                    <span className="text-gray-700">{nodeData.color.toUpperCase()}</span>
+                  </div>
+                  <ApperIcon name="Palette" className="w-4 h-4 text-gray-500" />
+                </button>
+                
+                {showColorPicker && (
+                  <div className="absolute top-full left-0 mt-2 z-50">
+                    <div className="fixed inset-0" onClick={() => setShowColorPicker(false)} />
+                    <div className="relative">
+                      <SketchPicker
+                        color={nodeData.color}
+                        onChange={handleColorChange}
+                        disableAlpha
+                      />
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -130,7 +169,6 @@ const PropertiesPanel = ({ selectedNode, onNodeUpdate, onClose }) => {
                 className="input-field resize-none"
               />
             </div>
-
             <div className="flex items-center space-x-3 pt-4 border-t border-gray-100">
               <Button
                 onClick={handleSave}

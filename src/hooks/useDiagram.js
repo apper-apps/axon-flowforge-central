@@ -79,9 +79,10 @@ export const useDiagram = () => {
     setError('')
   }, [])
 
-  const retryGeneration = useCallback(() => {
-    if (diagram?.prompt) {
-      generateDiagram(diagram.prompt)
+const retryGeneration = useCallback((lastPrompt) => {
+    const promptToUse = lastPrompt || diagram?.prompt
+    if (promptToUse) {
+      generateDiagram(promptToUse)
     }
   }, [diagram?.prompt, generateDiagram])
 

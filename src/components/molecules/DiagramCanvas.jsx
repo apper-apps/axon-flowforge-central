@@ -9,7 +9,7 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
 
-  // Node type configurations
+// Node type configurations
   const nodeTypes = {
     start: { shape: 'ellipse', color: '#10b981', icon: 'Play' },
     end: { shape: 'ellipse', color: '#ef4444', icon: 'Square' },
@@ -18,7 +18,6 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
     data: { shape: 'parallelogram', color: '#8b5cf6', icon: 'Database' },
     connector: { shape: 'circle', color: '#6b7280', icon: 'Circle' }
   }
-
   const handleWheel = (e) => {
     e.preventDefault()
     const delta = e.deltaY > 0 ? -0.1 : 0.1
@@ -56,8 +55,9 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
     }
   }, [isDragging, dragStart])
 
-  const renderNode = (node, index) => {
+const renderNode = (node, index) => {
     const config = nodeTypes[node.type] || nodeTypes.process
+    const nodeColor = node.color || config.color
     const isSelected = selectedNode?.id === node.id
 
     return (
@@ -78,9 +78,9 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
             y={node.position.y - 30}
             width={120}
             height={60}
-            rx={8}
+rx={8}
             fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : config.color}
+            stroke={isSelected ? '#3b82f6' : nodeColor}
             strokeWidth={isSelected ? 3 : 2}
             className="node-shape"
           />
@@ -91,9 +91,9 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
             cx={node.position.x}
             cy={node.position.y}
             rx={60}
-            ry={30}
+ry={30}
             fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : config.color}
+            stroke={isSelected ? '#3b82f6' : nodeColor}
             strokeWidth={isSelected ? 3 : 2}
             className="node-shape"
           />
@@ -101,9 +101,9 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
         
         {config.shape === 'diamond' && (
           <polygon
-            points={`${node.position.x},${node.position.y - 35} ${node.position.x + 70},${node.position.y} ${node.position.x},${node.position.y + 35} ${node.position.x - 70},${node.position.y}`}
+points={`${node.position.x},${node.position.y - 35} ${node.position.x + 70},${node.position.y} ${node.position.x},${node.position.y + 35} ${node.position.x - 70},${node.position.y}`}
             fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : config.color}
+            stroke={isSelected ? '#3b82f6' : nodeColor}
             strokeWidth={isSelected ? 3 : 2}
             className="node-shape"
           />
@@ -111,9 +111,9 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
         
         {config.shape === 'parallelogram' && (
           <polygon
-            points={`${node.position.x - 50},${node.position.y - 25} ${node.position.x + 70},${node.position.y - 25} ${node.position.x + 50},${node.position.y + 25} ${node.position.x - 70},${node.position.y + 25}`}
+points={`${node.position.x - 50},${node.position.y - 25} ${node.position.x + 70},${node.position.y - 25} ${node.position.x + 50},${node.position.y + 25} ${node.position.x - 70},${node.position.y + 25}`}
             fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : config.color}
+            stroke={isSelected ? '#3b82f6' : nodeColor}
             strokeWidth={isSelected ? 3 : 2}
             className="node-shape"
           />
@@ -123,9 +123,9 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
           <circle
             cx={node.position.x}
             cy={node.position.y}
-            r={25}
+r={25}
             fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : config.color}
+            stroke={isSelected ? '#3b82f6' : nodeColor}
             strokeWidth={isSelected ? 3 : 2}
             className="node-shape"
           />

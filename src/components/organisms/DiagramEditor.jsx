@@ -10,21 +10,27 @@ import Loading from '@/components/ui/Loading'
 import Error from '@/components/ui/Error'
 import Empty from '@/components/ui/Empty'
 
-const DiagramEditor = ({ diagram, loading, error, onRetry, onPromptFocus }) => {
+const DiagramEditor = ({ diagram, loading, error, onRetry, onPromptFocus, onNodeUpdate, onClearCanvas }) => {
   const [selectedNode, setSelectedNode] = useState(null)
   const [showProperties, setShowProperties] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
-
   const handleNodeSelect = (node) => {
     setSelectedNode(node)
     setShowProperties(true)
   }
 
-  const handleNodeUpdate = (nodeId, nodeData) => {
-    // This would update the diagram state in the parent component
-    toast.success('Node updated successfully')
+const handleNodeUpdate = (nodeId, nodeData) => {
+    if (nodeData._delete) {
+      // Handle node deletion
+      onNodeUpdate(nodeId, nodeData)
+      setSelectedNode(null)
+      setShowProperties(false)
+      toast.success('Node deleted successfully')
+    } else {
+      onNodeUpdate(nodeId, nodeData)
+      toast.success('Node updated successfully')
+    }
   }
-
   const handleCanvasClick = () => {
     setSelectedNode(null)
     setShowProperties(false)
@@ -38,9 +44,11 @@ const DiagramEditor = ({ diagram, loading, error, onRetry, onPromptFocus }) => {
     }, 1000)
   }
 
-  const handleClearCanvas = () => {
+const handleClearCanvas = () => {
     if (window.confirm('Are you sure you want to clear the canvas? This action cannot be undone.')) {
-      // This would clear the diagram in the parent component
+      onClearCanvas()
+      setSelectedNode(null)
+      setShowProperties(false)
       toast.info('Canvas cleared')
     }
   }
