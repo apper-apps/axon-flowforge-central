@@ -1,0 +1,150 @@
+[
+  {
+    "Id": 1,
+    "name": "Employee Onboarding Process",
+    "prompt": "New employee application review, background check, offer letter, first day setup, orientation, training schedule",
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "start",
+        "label": "Application Received",
+        "description": "New employee application submitted",
+        "position": { "x": 200, "y": 150 }
+      },
+      {
+        "id": "node-2",
+        "type": "process",
+        "label": "Review Application",
+        "description": "HR reviews application and qualifications",
+        "position": { "x": 450, "y": 150 }
+      },
+      {
+        "id": "node-3",
+        "type": "decision",
+        "label": "Background Check",
+        "description": "Conduct background verification",
+        "position": { "x": 700, "y": 150 }
+      },
+      {
+        "id": "node-4",
+        "type": "process",
+        "label": "Send Offer Letter",
+        "description": "Prepare and send job offer",
+        "position": { "x": 950, "y": 150 }
+      },
+      {
+        "id": "node-5",
+        "type": "end",
+        "label": "First Day Setup",
+        "description": "Complete onboarding process",
+        "position": { "x": 1200, "y": 150 }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-1",
+        "sourceId": "node-1",
+        "targetId": "node-2",
+        "label": "",
+        "type": "flow"
+      },
+      {
+        "id": "conn-2",
+        "sourceId": "node-2",
+        "targetId": "node-3",
+        "label": "Approved",
+        "type": "flow"
+      },
+      {
+        "id": "conn-3",
+        "sourceId": "node-3",
+        "targetId": "node-4",
+        "label": "Passed",
+        "type": "flow"
+      },
+      {
+        "id": "conn-4",
+        "sourceId": "node-4",
+        "targetId": "node-5",
+        "label": "Accepted",
+        "type": "flow"
+      }
+    ],
+    "style": "standard",
+    "createdAt": "2024-01-15T10:30:00Z"
+  },
+  {
+    "Id": 2,
+    "name": "Customer Support Workflow",
+    "prompt": "Customer submits ticket, agent reviews, escalates if needed, resolves issue, follows up",
+    "nodes": [
+      {
+        "id": "node-1",
+        "type": "start",
+        "label": "Ticket Submitted",
+        "description": "Customer creates support ticket",
+        "position": { "x": 200, "y": 150 }
+      },
+      {
+        "id": "node-2",
+        "type": "process",
+        "label": "Agent Review",
+        "description": "Support agent reviews ticket details",
+        "position": { "x": 450, "y": 150 }
+      },
+      {
+        "id": "node-3",
+        "type": "decision",
+        "label": "Escalation Required?",
+        "description": "Determine if escalation is needed",
+        "position": { "x": 700, "y": 150 }
+      },
+      {
+        "id": "node-4",
+        "type": "process",
+        "label": "Resolve Issue",
+        "description": "Agent resolves the issue",
+        "position": { "x": 950, "y": 150 }
+      },
+      {
+        "id": "node-5",
+        "type": "end",
+        "label": "Follow Up",
+        "description": "Contact customer for feedback",
+        "position": { "x": 1200, "y": 150 }
+      }
+    ],
+    "connections": [
+      {
+        "id": "conn-1",
+        "sourceId": "node-1",
+        "targetId": "node-2",
+        "label": "",
+        "type": "flow"
+      },
+      {
+        "id": "conn-2",
+        "sourceId": "node-2",
+        "targetId": "node-3",
+        "label": "",
+        "type": "flow"
+      },
+      {
+        "id": "conn-3",
+        "sourceId": "node-3",
+        "targetId": "node-4",
+        "label": "No",
+        "type": "flow"
+      },
+      {
+        "id": "conn-4",
+        "sourceId": "node-4",
+        "targetId": "node-5",
+        "label": "Resolved",
+        "type": "flow"
+      }
+    ],
+    "style": "standard",
+    "createdAt": "2024-01-15T11:45:00Z"
+  }
+]
