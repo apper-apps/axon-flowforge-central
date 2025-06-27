@@ -1,14 +1,26 @@
-import React, { useRef, useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import ApperIcon from '@/components/ApperIcon'
+import React, { useCallback, useEffect, useRef, useState } from "react";
+import { motion } from "framer-motion";
+import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
+import { snapToGrid } from "@/utils/diagramUtils";
+import ApperIcon from "@/components/ApperIcon";
 
-const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) => {
+const DiagramCanvas = ({ 
+  diagram, 
+  onNodeSelect, 
+  selectedNode, 
+  selectedNodes = [],
+  onCanvasClick,
+  onNodePositionUpdate,
+  onMultiSelect,
+  onClearSelection 
+}) => {
   const canvasRef = useRef(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
-
+  const [draggedNode, setDraggedNode] = useState(null)
+  const [hoveredNode, setHoveredNode] = useState(null)
 // Node type configurations
   const nodeTypes = {
     start: { shape: 'ellipse', color: '#10b981', icon: 'Play' },
@@ -53,95 +65,179 @@ const DiagramCanvas = ({ diagram, onNodeSelect, selectedNode, onCanvasClick }) =
         document.removeEventListener('mouseup', handleMouseUp)
       }
     }
-  }, [isDragging, dragStart])
+}, [isDragging, dragStart])
 
+  // Keyboard event handlers
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Delete' && selectedNodes.length > 0) {
+        e.preventDefault()
+        // Trigger bulk delete through parent component
+        if (window.confirm(`Delete ${selectedNodes.length} selected node(s)?`)) {
+          selectedNodes.forEach(node => {
+            onNodeSelect({ ...node, _bulkDelete: true })
+          })
+        }
+      } else if (e.key === 'Escape') {
+        onClearSelection?.()
+      }
+    }
+
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [selectedNodes, onNodeSelect, onClearSelection])
+
+  // Handle drag end for node repositioning
+  const handleDragEnd = useCallback((result) => {
+    if (!result.destination) return
+
+    const { draggableId } = result
+    const node = diagram?.nodes?.find(n => n.id === draggableId)
+    if (!node) return
+
+    // Calculate new position based on drag result
+    // This is a simplified position update - in a real implementation,
+    // you'd calculate based on the actual drag coordinates
+    const newPosition = snapToGrid({
+      x: node.position.x + (result.destination.index - result.source.index) * 20,
+      y: node.position.y
+    })
+
+    onNodePositionUpdate?.(draggableId, newPosition)
+  }, [diagram, onNodePositionUpdate])
 const renderNode = (node, index) => {
     const config = nodeTypes[node.type] || nodeTypes.process
     const nodeColor = node.color || config.color
     const isSelected = selectedNode?.id === node.id
+    const isMultiSelected = selectedNodes.some(n => n.id === node.id)
+    const isHovered = hoveredNode === node.id
 
     return (
-      <motion.g
-        key={node.id}
-        initial={{ opacity: 0, scale: 0.8 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: index * 0.1, duration: 0.3 }}
-        style={{ cursor: 'pointer' }}
-        onClick={(e) => {
-          e.stopPropagation()
-          onNodeSelect(node)
-        }}
-      >
-        {config.shape === 'rectangle' && (
-          <rect
-            x={node.position.x - 60}
-            y={node.position.y - 30}
-            width={120}
-            height={60}
-rx={8}
-            fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : nodeColor}
-            strokeWidth={isSelected ? 3 : 2}
-            className="node-shape"
-          />
-        )}
+      <Draggable key={node.id} draggableId={node.id} index={index}>
+        {(provided, snapshot) => (
+          <motion.g
+            ref={provided.innerRef}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ 
+              opacity: 1, 
+              scale: snapshot.isDragging ? 1.05 : (isHovered ? 1.02 : 1),
+              boxShadow: snapshot.isDragging ? '0 8px 16px rgba(0,0,0,0.15)' : 'none'
+            }}
+            transition={{ delay: index * 0.1, duration: 0.3 }}
+            style={{ cursor: snapshot.isDragging ? 'grabbing' : 'grab' }}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (e.ctrlKey || e.metaKey) {
+                onMultiSelect?.(node)
+              } else {
+                onNodeSelect(node)
+              }
+            }}
+            onMouseEnter={() => setHoveredNode(node.id)}
+            onMouseLeave={() => setHoveredNode(null)}
+          >
+{config.shape === 'rectangle' && (
+              <rect
+                x={node.position.x - 60}
+                y={node.position.y - 30}
+                width={120}
+                height={60}
+                rx={8}
+                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                className="node-shape transition-all duration-200"
+                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+              />
+            )}
+{config.shape === 'ellipse' && (
+              <ellipse
+                cx={node.position.x}
+                cy={node.position.y}
+                rx={60}
+                ry={30}
+                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                className="node-shape transition-all duration-200"
+                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+              />
+            )}
         
-        {config.shape === 'ellipse' && (
-          <ellipse
-            cx={node.position.x}
-            cy={node.position.y}
-            rx={60}
-ry={30}
-            fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : nodeColor}
-            strokeWidth={isSelected ? 3 : 2}
-            className="node-shape"
-          />
-        )}
+{config.shape === 'diamond' && (
+              <polygon
+                points={`${node.position.x},${node.position.y - 35} ${node.position.x + 70},${node.position.y} ${node.position.x},${node.position.y + 35} ${node.position.x - 70},${node.position.y}`}
+                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                className="node-shape transition-all duration-200"
+                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+              />
+            )}
         
-        {config.shape === 'diamond' && (
-          <polygon
-points={`${node.position.x},${node.position.y - 35} ${node.position.x + 70},${node.position.y} ${node.position.x},${node.position.y + 35} ${node.position.x - 70},${node.position.y}`}
-            fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : nodeColor}
-            strokeWidth={isSelected ? 3 : 2}
-            className="node-shape"
-          />
-        )}
+{config.shape === 'parallelogram' && (
+              <polygon
+                points={`${node.position.x - 50},${node.position.y - 25} ${node.position.x + 70},${node.position.y - 25} ${node.position.x + 50},${node.position.y + 25} ${node.position.x - 70},${node.position.y + 25}`}
+                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                className="node-shape transition-all duration-200"
+                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+              />
+            )}
         
-        {config.shape === 'parallelogram' && (
-          <polygon
-points={`${node.position.x - 50},${node.position.y - 25} ${node.position.x + 70},${node.position.y - 25} ${node.position.x + 50},${node.position.y + 25} ${node.position.x - 70},${node.position.y + 25}`}
-            fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : nodeColor}
-            strokeWidth={isSelected ? 3 : 2}
-            className="node-shape"
-          />
-        )}
+{config.shape === 'circle' && (
+              <circle
+                cx={node.position.x}
+                cy={node.position.y}
+                r={25}
+                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                className="node-shape transition-all duration-200"
+                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+              />
+            )}
         
-        {config.shape === 'circle' && (
-          <circle
-            cx={node.position.x}
-            cy={node.position.y}
-r={25}
-            fill={isSelected ? '#dbeafe' : '#ffffff'}
-            stroke={isSelected ? '#3b82f6' : nodeColor}
-            strokeWidth={isSelected ? 3 : 2}
-            className="node-shape"
-          />
+<text
+              x={node.position.x}
+              y={node.position.y}
+              textAnchor="middle"
+              dy="0.35em"
+              className={`text-sm font-medium pointer-events-none transition-all duration-200 ${
+                isSelected || isMultiSelected ? 'fill-blue-700' : 'fill-gray-800'
+              }`}
+              style={{ fontSize: '12px' }}
+            >
+              {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
+            </text>
+            
+            {/* Multi-selection indicator */}
+            {isMultiSelected && !isSelected && (
+              <circle
+                cx={node.position.x + 45}
+                cy={node.position.y - 25}
+                r={8}
+                fill="#3b82f6"
+                className="selection-indicator"
+              >
+                <text
+                  x={node.position.x + 45}
+                  y={node.position.y - 25}
+                  textAnchor="middle"
+                  dy="0.35em"
+                  className="fill-white text-xs font-bold"
+                  style={{ fontSize: '10px' }}
+                >
+                  ✓
+                </text>
+              </circle>
+            )}
+          </motion.g>
         )}
-        
-        <text
-          x={node.position.x}
-          y={node.position.y}
-          textAnchor="middle"
-          dy="0.35em"
-          className="text-sm font-medium fill-gray-800 pointer-events-none"
-          style={{ fontSize: '12px' }}
-        >
-          {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
-        </text>
-      </motion.g>
+      </Draggable>
     )
   }
 
@@ -255,26 +351,55 @@ r={25}
       </div>
 
       {/* Canvas */}
-      <svg
-        ref={canvasRef}
-        className="w-full h-full diagram-canvas cursor-grab active:cursor-grabbing"
-        onWheel={handleWheel}
-        onMouseDown={handleMouseDown}
-        onClick={onCanvasClick}
-        style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
-      >
-        <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
-          {/* Render connections first (behind nodes) */}
-          {diagram?.connections?.map((connection, index) => 
-            renderConnection(connection, index)
-          )}
-          
-          {/* Render nodes */}
-          {diagram?.nodes?.map((node, index) => 
-            renderNode(node, index)
-          )}
-        </g>
-      </svg>
+<DragDropContext onDragEnd={handleDragEnd}>
+        <svg
+          ref={canvasRef}
+          className="w-full h-full diagram-canvas cursor-grab active:cursor-grabbing"
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onClick={(e) => {
+            if (e.target === canvasRef.current || e.target.closest('svg')) {
+              onCanvasClick?.()
+            }
+          }}
+          style={{ cursor: isDragging ? 'grabbing' : 'grab' }}
+        >
+          <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
+            {/* Render connections first (behind nodes) */}
+            {diagram?.connections?.map((connection, index) => 
+              renderConnection(connection, index)
+            )}
+            
+            {/* Render nodes with drag and drop */}
+            <Droppable droppableId="diagram-canvas" type="NODE">
+              {(provided) => (
+                <g ref={provided.innerRef} {...provided.droppableProps}>
+                  {diagram?.nodes?.map((node, index) => 
+                    renderNode(node, index)
+                  )}
+                  {provided.placeholder}
+                </g>
+              )}
+            </Droppable>
+          </g>
+        </svg>
+      </DragDropContext>
+      
+      {/* Multi-selection info */}
+      {selectedNodes.length > 1 && (
+        <motion.div 
+          className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 shadow-sm"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-2 text-sm text-blue-700">
+            <ApperIcon name="MousePointer2" className="w-4 h-4" />
+            <span>{selectedNodes.length} nodes selected</span>
+            <span className="text-blue-500">•</span>
+            <span className="text-xs">Press Delete to remove, Esc to clear selection</span>
+          </div>
+        </motion.div>
+      )}
     </div>
   )
 }

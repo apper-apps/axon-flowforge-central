@@ -1,10 +1,17 @@
-import React, { useState, useEffect } from 'react'
-import { motion, AnimatePresence } from 'framer-motion'
-import { SketchPicker } from 'react-color'
-import Input from '@/components/atoms/Input'
-import Button from '@/components/atoms/Button'
-import ApperIcon from '@/components/ApperIcon'
-const PropertiesPanel = ({ selectedNode, onNodeUpdate, onClose }) => {
+import React, { useEffect, useState } from "react";
+import { AnimatePresence, motion } from "framer-motion";
+import { SketchPicker } from "react-color";
+import ApperIcon from "@/components/ApperIcon";
+import Button from "@/components/atoms/Button";
+import Input from "@/components/atoms/Input";
+
+const PropertiesPanel = ({ 
+  selectedNode, 
+  selectedNodes = [], 
+  onNodeUpdate, 
+  onBulkDelete,
+  onClose 
+}) => {
   const [nodeData, setNodeData] = useState({
     label: '',
     type: 'process',
@@ -39,17 +46,28 @@ useEffect(() => {
   }
 
 const handleDelete = () => {
-    if (selectedNode && window.confirm('Are you sure you want to delete this node?')) {
-      onNodeUpdate(selectedNode.id, { ...selectedNode, _delete: true })
-      onClose()
+    if (selectedNodes.length > 1) {
+      // Bulk delete
+      if (window.confirm(`Are you sure you want to delete ${selectedNodes.length} selected nodes?`)) {
+        onBulkDelete?.(selectedNodes)
+        onClose()
+      }
+    } else if (selectedNode) {
+      // Single delete
+      if (window.confirm('Are you sure you want to delete this node?')) {
+        onNodeUpdate(selectedNode.id, { ...selectedNode, _delete: true })
+        onClose()
+      }
     }
   }
 
-  const handleColorChange = (color) => {
+const handleColorChange = (color) => {
     setNodeData(prev => ({ ...prev, color: color.hex }))
   }
 
-  if (!selectedNode) return null
+  const isBulkSelection = selectedNodes.length > 1
+  
+  if (!selectedNode && !isBulkSelection) return null
 
   return (
     <AnimatePresence>
@@ -65,11 +83,18 @@ const handleDelete = () => {
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
                 <ApperIcon name="Settings" className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h3 className="text-lg font-bold text-gray-900">Node Properties</h3>
-                <p className="text-sm text-gray-600">Edit node details</p>
-              </div>
+</div>
+            <div>
+              <h3 className="text-lg font-bold text-gray-900">
+                {isBulkSelection ? 'Bulk Operations' : 'Node Properties'}
+              </h3>
+              <p className="text-sm text-gray-600">
+                {isBulkSelection 
+                  ? `${selectedNodes.length} nodes selected`
+                  : 'Edit node details'
+                }
+              </p>
+            </div>
             </div>
             <button
               onClick={onClose}
@@ -78,8 +103,51 @@ const handleDelete = () => {
               <ApperIcon name="X" className="w-5 h-5 text-gray-500" />
             </button>
           </div>
-
-          <div className="space-y-6">
+<div className="space-y-6">
+            {isBulkSelection ? (
+              /* Bulk Operations Interface */
+              <div className="space-y-4">
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-3">
+                    <ApperIcon name="Users" className="w-5 h-5 text-blue-600" />
+                    <span className="font-medium text-blue-900">Selected Nodes</span>
+                  </div>
+                  <div className="space-y-2 max-h-32 overflow-y-auto">
+                    {selectedNodes.map((node, index) => (
+                      <div key={node.id} className="flex items-center space-x-2 text-sm">
+                        <div 
+                          className="w-3 h-3 rounded-full"
+                          style={{ backgroundColor: node.color || '#3b82f6' }}
+                        />
+                        <span className="text-gray-700 truncate flex-1">
+                          {node.label || `Node ${index + 1}`}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                
+                <div className="bg-amber-50 border border-amber-200 rounded-lg p-4">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <ApperIcon name="AlertTriangle" className="w-5 h-5 text-amber-600" />
+                    <span className="font-medium text-amber-900">Bulk Actions</span>
+                  </div>
+                  <p className="text-sm text-amber-700 mb-3">
+                    These actions will affect all selected nodes.
+                  </p>
+                  <Button
+                    onClick={handleDelete}
+                    variant="danger"
+                    icon="Trash2"
+                    className="w-full"
+                  >
+                    Delete All Selected ({selectedNodes.length})
+                  </Button>
+                </div>
+              </div>
+            ) : (
+              /* Single Node Interface */
+              <>
             <Input
               label="Node Label"
               value={nodeData.label}
@@ -168,7 +236,8 @@ const handleDelete = () => {
                 rows={3}
                 className="input-field resize-none"
               />
-            </div>
+</div>
+            
             <div className="flex items-center space-x-3 pt-4 border-t border-gray-100">
               <Button
                 onClick={handleSave}
@@ -185,8 +254,10 @@ const handleDelete = () => {
                 icon="Trash2"
                 className="px-4"
               >
-              </Button>
+</Button>
             </div>
+            </>
+            )}
           </div>
         </div>
       </motion.div>

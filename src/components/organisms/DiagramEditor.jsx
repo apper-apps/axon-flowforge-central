@@ -10,13 +10,50 @@ import Loading from '@/components/ui/Loading'
 import Error from '@/components/ui/Error'
 import Empty from '@/components/ui/Empty'
 
-const DiagramEditor = ({ diagram, loading, error, onRetry, onPromptFocus, onNodeUpdate, onClearCanvas }) => {
+const DiagramEditor = ({ 
+  diagram, 
+  loading, 
+  error, 
+  onRetry, 
+  onPromptFocus, 
+  onNodeUpdate, 
+  onNodePositionUpdate,
+  onClearCanvas 
+}) => {
   const [selectedNode, setSelectedNode] = useState(null)
+  const [selectedNodes, setSelectedNodes] = useState([])
   const [showProperties, setShowProperties] = useState(false)
   const [showExportDialog, setShowExportDialog] = useState(false)
+
   const handleNodeSelect = (node) => {
+    if (node._bulkDelete) {
+      // Handle bulk delete from keyboard shortcut
+      handleNodeUpdate(node.id, node)
+      return
+    }
+    
     setSelectedNode(node)
+    setSelectedNodes([]) // Clear multi-selection when selecting single node
     setShowProperties(true)
+  }
+
+  const handleMultiSelect = (node) => {
+    setSelectedNode(null) // Clear single selection
+    setSelectedNodes(prev => {
+      const isAlreadySelected = prev.some(n => n.id === node.id)
+      if (isAlreadySelected) {
+        return prev.filter(n => n.id !== node.id)
+      } else {
+        return [...prev, node]
+      }
+    })
+    setShowProperties(true)
+  }
+
+  const handleClearSelection = () => {
+    setSelectedNode(null)
+    setSelectedNodes([])
+    setShowProperties(false)
   }
 
 const handleNodeUpdate = (nodeId, nodeData) => {
@@ -24,16 +61,29 @@ const handleNodeUpdate = (nodeId, nodeData) => {
       // Handle node deletion
       onNodeUpdate(nodeId, nodeData)
       setSelectedNode(null)
-      setShowProperties(false)
+      setSelectedNodes(prev => prev.filter(n => n.id !== nodeId))
+      if (selectedNodes.length <= 1) {
+        setShowProperties(false)
+      }
       toast.success('Node deleted successfully')
     } else {
       onNodeUpdate(nodeId, nodeData)
       toast.success('Node updated successfully')
     }
   }
-  const handleCanvasClick = () => {
+
+  const handleBulkDelete = (nodes) => {
+    nodes.forEach(node => {
+      onNodeUpdate(node.id, { ...node, _delete: true })
+    })
+    setSelectedNodes([])
     setSelectedNode(null)
     setShowProperties(false)
+    toast.success(`${nodes.length} nodes deleted successfully`)
+  }
+
+  const handleCanvasClick = () => {
+    handleClearSelection()
   }
 
   const handleExport = (options) => {
@@ -104,28 +154,73 @@ const handleClearCanvas = () => {
         >
           Clear
         </Button>
-        
-        <div className="border-l border-gray-200 pl-2 ml-2">
-          <div className="flex items-center space-x-2 text-sm text-gray-600">
-            <ApperIcon name="Layers" className="w-4 h-4" />
-            <span>{diagram.nodes.length} nodes</span>
+<div className="border-l border-gray-200 pl-2 ml-2">
+          <div className="flex items-center space-x-4 text-sm text-gray-600">
+            <div className="flex items-center space-x-1">
+              <ApperIcon name="Layers" className="w-4 h-4" />
+              <span>{diagram.nodes.length} nodes</span>
+            </div>
+            {selectedNodes.length > 0 && (
+              <div className="flex items-center space-x-1 text-blue-600">
+                <ApperIcon name="MousePointer2" className="w-4 h-4" />
+                <span>{selectedNodes.length} selected</span>
+              </div>
+            )}
           </div>
         </div>
       </motion.div>
 
-      {/* Canvas */}
+      {/* Multi-select toolbar */}
+      {selectedNodes.length > 1 && (
+        <motion.div 
+          className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-50 border border-blue-200 rounded-lg shadow-md p-3 z-10"
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+        >
+          <div className="flex items-center space-x-3">
+            <div className="flex items-center space-x-2 text-sm text-blue-700">
+              <ApperIcon name="Users" className="w-4 h-4" />
+              <span>{selectedNodes.length} nodes selected</span>
+            </div>
+            <Button
+              onClick={() => handleBulkDelete(selectedNodes)}
+              variant="danger"
+              size="sm"
+              icon="Trash2"
+            >
+              Delete All
+            </Button>
+            <Button
+              onClick={handleClearSelection}
+              variant="ghost"
+              size="sm"
+              icon="X"
+            >
+              Clear
+            </Button>
+          </div>
+        </motion.div>
+      )}
+
+{/* Canvas */}
       <DiagramCanvas
         diagram={diagram}
         selectedNode={selectedNode}
+        selectedNodes={selectedNodes}
         onNodeSelect={handleNodeSelect}
+        onMultiSelect={handleMultiSelect}
+        onClearSelection={handleClearSelection}
         onCanvasClick={handleCanvasClick}
+        onNodePositionUpdate={onNodePositionUpdate}
       />
 
-      {/* Properties Panel */}
-      {showProperties && selectedNode && (
+{/* Properties Panel */}
+      {showProperties && (selectedNode || selectedNodes.length > 0) && (
         <PropertiesPanel
           selectedNode={selectedNode}
+          selectedNodes={selectedNodes}
           onNodeUpdate={handleNodeUpdate}
+          onBulkDelete={handleBulkDelete}
           onClose={() => setShowProperties(false)}
         />
       )}

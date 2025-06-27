@@ -39,7 +39,7 @@ export const useDiagram = () => {
     }
   }, [])
 
-  const updateNode = useCallback((nodeId, nodeData) => {
+const updateNode = useCallback((nodeId, nodeData) => {
     if (!diagram || !nodeId || !nodeData) return
 
     setDiagram(prevDiagram => {
@@ -50,6 +50,43 @@ export const useDiagram = () => {
       return {
         ...prevDiagram,
         nodes: updatedNodes
+      }
+    })
+  }, [diagram])
+
+  const updateNodePosition = useCallback((nodeId, newPosition) => {
+    if (!diagram || !nodeId || !newPosition) return
+
+    setDiagram(prevDiagram => {
+      const updatedNodes = prevDiagram.nodes.map(node =>
+        node.id === nodeId 
+          ? { ...node, position: { x: newPosition.x, y: newPosition.y } }
+          : node
+      )
+
+      return {
+        ...prevDiagram,
+        nodes: updatedNodes
+      }
+    })
+  }, [diagram])
+
+  const bulkDeleteNodes = useCallback((nodeIds) => {
+    if (!diagram || !nodeIds || nodeIds.length === 0) return
+
+    setDiagram(prevDiagram => {
+      // Remove the nodes
+      const updatedNodes = prevDiagram.nodes.filter(node => !nodeIds.includes(node.id))
+      
+      // Remove connections that reference any of the deleted nodes
+      const updatedConnections = prevDiagram.connections.filter(
+        connection => !nodeIds.includes(connection.sourceId) && !nodeIds.includes(connection.targetId)
+      )
+
+      return {
+        ...prevDiagram,
+        nodes: updatedNodes,
+        connections: updatedConnections
       }
     })
   }, [diagram])
@@ -86,13 +123,15 @@ const retryGeneration = useCallback((lastPrompt) => {
     }
   }, [diagram?.prompt, generateDiagram])
 
-  return {
+return {
     diagram,
     loading,
     error,
     generateDiagram,
     updateNode,
+    updateNodePosition,
     deleteNode,
+    bulkDeleteNodes,
     clearDiagram,
     retryGeneration
   }

@@ -136,12 +136,42 @@ export const getDiagramBounds = (diagram) => {
   const minY = Math.min(...positions.map(p => p.y)) - 50
   const maxY = Math.max(...positions.map(p => p.y)) + 50
   
-  return {
+return {
     minX,
     maxX,
     minY,
     maxY,
     width: maxX - minX,
     height: maxY - minY
+  }
+}
+
+export const updateNodePosition = (diagram, nodeId, newPosition) => {
+  if (!diagram?.nodes || !nodeId || !newPosition) return diagram
+  
+  const updatedNodes = diagram.nodes.map(node =>
+    node.id === nodeId 
+      ? { ...node, position: { x: newPosition.x, y: newPosition.y } }
+      : node
+  )
+  
+  return {
+    ...diagram,
+    nodes: updatedNodes
+  }
+}
+
+export const getNodeCenter = (node) => {
+  if (!node?.position) return { x: 0, y: 0 }
+  return {
+    x: node.position.x,
+    y: node.position.y
+  }
+}
+
+export const snapToGrid = (position, gridSize = 20) => {
+  return {
+    x: Math.round(position.x / gridSize) * gridSize,
+    y: Math.round(position.y / gridSize) * gridSize
   }
 }
