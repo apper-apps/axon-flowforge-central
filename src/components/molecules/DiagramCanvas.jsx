@@ -332,10 +332,10 @@ const DiagramCanvas = ({
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
         >
-          <div className="flex items-center space-x-2 text-sm text-blue-700">
+<div className="flex items-center space-x-2 text-sm text-blue-700">
             <ApperIcon name="MousePointer2" className="w-4 h-4" />
             <span>{selectedNodes.length} nodes selected</span>
-            <span className="text-blue-500">•</span>
+            <span className="text-blue-500">•</span>,
             <span className="text-xs">Press Delete to remove, Esc to clear selection</span>
           </div>
         </motion.div>
