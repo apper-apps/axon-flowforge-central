@@ -92,158 +92,70 @@ const DiagramCanvas = ({
     if (!result.destination) return
 
     const { draggableId } = result
-    const node = diagram?.nodes?.find(n => n.id === draggableId)
-    if (!node) return
-
-    // Calculate new position based on drag result
-    // This is a simplified position update - in a real implementation,
-    // you'd calculate based on the actual drag coordinates
-    const newPosition = snapToGrid({
-      x: node.position.x + (result.destination.index - result.source.index) * 20,
-      y: node.position.y
-    })
-
-    onNodePositionUpdate?.(draggableId, newPosition)
-  }, [diagram, onNodePositionUpdate])
 const renderNode = (node, index) => {
     const config = nodeTypes[node.type] || nodeTypes.process
     const nodeColor = node.color || config.color
     const isSelected = selectedNode?.id === node.id
-    const isMultiSelected = selectedNodes.some(n => n.id === node.id)
-    const isHovered = hoveredNode === node.id
+    const isMultiSelected = selectedNodes?.some(n => n.id === node.id)
+    const isHovered = hoveredNode?.id === node.id
 
-return (
+    return (
       <Draggable key={node.id} draggableId={node.id} index={index}>
         {(provided, snapshot) => (
           <motion.div
-            ref={(el) => {
-              // Forward ref to both React Beautiful DND and Framer Motion
-              provided.innerRef(el);
+            ref={provided.innerRef}
+            className={`absolute cursor-move select-none ${
+              snapshot.isDragging ? 'z-50' : 'z-10'
+            }`}
+            style={{
+              left: node.x,
+              top: node.y,
+              transform: `scale(${zoom})`,
+              transformOrigin: 'top left'
             }}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
-            initial={{ opacity: 0, scale: 0.8 }}
-            animate={{ 
-              opacity: 1, 
-              scale: snapshot.isDragging ? 1.05 : (isHovered ? 1.02 : 1),
-              boxShadow: snapshot.isDragging ? '0 8px 16px rgba(0,0,0,0.15)' : 'none'
-            }}
-            transition={{ delay: index * 0.1, duration: 0.3 }}
-            style={{ 
-              position: 'absolute',
-              left: node.position.x,
-              top: node.position.y,
-              transform: 'translate(-50%, -50%)',
-              cursor: snapshot.isDragging ? 'grabbing' : 'grab',
-              zIndex: snapshot.isDragging ? 1000 : 1
-            }}
+            whileHover={{ scale: zoom * 1.02 }}
+            whileTap={{ scale: zoom * 0.98 }}
+            onMouseEnter={() => setHoveredNode(node)}
+            onMouseLeave={() => setHoveredNode(null)}
             onClick={(e) => {
               e.stopPropagation()
               if (e.ctrlKey || e.metaKey) {
                 onMultiSelect?.(node)
               } else {
-                onNodeSelect(node)
+                onNodeSelect?.(node)
               }
             }}
-            onMouseEnter={() => setHoveredNode(node.id)}
-            onMouseLeave={() => setHoveredNode(null)}
+            {...provided.draggableProps}
+            {...provided.dragHandleProps}
           >
-            <svg width="140" height="70" style={{ overflow: 'visible' }}>
-              {config.shape === 'rectangle' && (
-                <rect
-                  x="10"
-                  y="5"
-                  width="120"
-                  height="60"
-                  rx={8}
-                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                  className="node-shape transition-all duration-200"
-                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+            <div
+              className={`
+                relative p-3 rounded-lg border-2 transition-all duration-200 min-w-[120px] text-center
+                ${isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300'}
+                ${isMultiSelected ? 'border-purple-500 shadow-md' : ''}
+                ${isHovered ? 'shadow-md' : ''}
+                ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}
+              `}
+              style={{ backgroundColor: nodeColor + '20', borderColor: nodeColor }}
+            >
+<div className="flex items-center justify-center mb-2">
+                <ApperIcon 
+                  name={config.icon} 
+                  className="w-6 h-6" 
+                  style={{ color: nodeColor }}
                 />
-              )}
-              {config.shape === 'ellipse' && (
-                <ellipse
-                  cx="70"
-                  cy="35"
-                  rx={60}
-                  ry={30}
-                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                  className="node-shape transition-all duration-200"
-                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-                />
-              )}
-              {config.shape === 'diamond' && (
-                <polygon
-                  points="70,0 140,35 70,70 0,35"
-                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                  className="node-shape transition-all duration-200"
-                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-                />
-              )}
-              {config.shape === 'parallelogram' && (
-                <polygon
-                  points="20,10 140,10 120,60 0,60"
-                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                  className="node-shape transition-all duration-200"
-                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-                />
-              )}
-              {config.shape === 'circle' && (
-                <circle
-                  cx="70"
-                  cy="35"
-                  r={25}
-                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                  className="node-shape transition-all duration-200"
-                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-                />
-              )}
-              <text
-                x="70"
-                y="35"
-                textAnchor="middle"
-                dy="0.35em"
-                className={`text-sm font-medium pointer-events-none transition-all duration-200 ${
-                  isSelected || isMultiSelected ? 'fill-blue-700' : 'fill-gray-800'
-                }`}
-                style={{ fontSize: '12px' }}
-              >
+              </div>
+              <div className="text-sm font-medium text-center text-gray-800">
                 {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
-              </text>
+              </div>
               
               {/* Multi-selection indicator */}
               {isMultiSelected && !isSelected && (
-                <g>
-                  <circle
-                    cx="115"
-                    cy="10"
-                    r={8}
-                    fill="#3b82f6"
-                    className="selection-indicator"
-                  />
-                  <text
-                    x="115"
-                    y="10"
-                    textAnchor="middle"
-                    dy="0.35em"
-                    className="fill-white text-xs font-bold"
-                    style={{ fontSize: '10px' }}
-                  >
-                    ✓
-                  </text>
-                </g>
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">✓</span>
+                </div>
               )}
-            </svg>
+            </div>
           </motion.div>
         )}
       </Draggable>
@@ -258,7 +170,7 @@ return (
     
     if (!sourceNode || !targetNode) return null
 
-    const path = `M ${sourceNode.position.x} ${sourceNode.position.y} Q ${(sourceNode.position.x + targetNode.position.x) / 2} ${sourceNode.position.y - 50} ${targetNode.position.x} ${targetNode.position.y}`
+const path = `M ${sourceNode.x} ${sourceNode.y} Q ${(sourceNode.x + targetNode.x) / 2} ${sourceNode.y - 50} ${targetNode.x} ${targetNode.y}`
 
     return (
       <motion.g
@@ -288,8 +200,8 @@ return (
         
         {connection.label && (
           <text
-            x={(sourceNode.position.x + targetNode.position.x) / 2}
-            y={sourceNode.position.y - 40}
+x={(sourceNode.x + targetNode.x) / 2}
+            y={sourceNode.y - 40}
             textAnchor="middle"
             className="text-xs fill-gray-600 font-medium"
             style={{ fontSize: '10px' }}
@@ -305,10 +217,10 @@ return (
     if (!diagram?.nodes || diagram.nodes.length === 0) return
     
     const padding = 100
-    const minX = Math.min(...diagram.nodes.map(n => n.position.x)) - padding
-    const maxX = Math.max(...diagram.nodes.map(n => n.position.x)) + padding
-    const minY = Math.min(...diagram.nodes.map(n => n.position.y)) - padding
-    const maxY = Math.max(...diagram.nodes.map(n => n.position.y)) + padding
+const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
+    const maxX = Math.max(...diagram.nodes.map(n => n.x)) + padding
+    const minY = Math.min(...diagram.nodes.map(n => n.y)) - padding
+    const maxY = Math.max(...diagram.nodes.map(n => n.y)) + padding
     
     const contentWidth = maxX - minX
     const contentHeight = maxY - minY
