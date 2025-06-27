@@ -4,15 +4,15 @@ import { DragDropContext, Draggable, Droppable } from "react-beautiful-dnd";
 import { snapToGrid } from "@/utils/diagramUtils";
 import ApperIcon from "@/components/ApperIcon";
 
-const DiagramCanvas = ({ 
-  diagram, 
-  onNodeSelect, 
-  selectedNode, 
+const DiagramCanvas = ({
+  diagram,
+  onNodeSelect,
+  selectedNode,
   selectedNodes = [],
   onCanvasClick,
   onNodePositionUpdate,
   onMultiSelect,
-  onClearSelection 
+  onClearSelection
 }) => {
   const canvasRef = useRef(null)
   const [zoom, setZoom] = useState(1)
@@ -21,7 +21,7 @@ const DiagramCanvas = ({
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [draggedNode, setDraggedNode] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
-// Node type configurations
+  // Node type configurations
   const nodeTypes = {
     start: { shape: 'ellipse', color: '#10b981', icon: 'Play' },
     end: { shape: 'ellipse', color: '#ef4444', icon: 'Square' },
@@ -65,7 +65,7 @@ const DiagramCanvas = ({
         document.removeEventListener('mouseup', handleMouseUp)
       }
     }
-}, [isDragging, dragStart])
+  }, [isDragging, dragStart])
 
   // Keyboard event handlers
   useEffect(() => {
@@ -92,7 +92,16 @@ const DiagramCanvas = ({
     if (!result.destination) return
 
     const { draggableId } = result
-const renderNode = (node, index) => {
+    const node = diagram.nodes.find(n => n.id === draggableId)
+    if (!node) return
+
+    const newX = snapToGrid((result.destination.x / zoom) - pan.x)
+    const newY = snapToGrid((result.destination.y / zoom) - pan.y)
+
+    onNodePositionUpdate?.(draggableId, { x: newX, y: newY })
+  }, [diagram.nodes, zoom, pan, onNodePositionUpdate])
+
+  const renderNode = (node, index) => {
     const config = nodeTypes[node.type] || nodeTypes.process
     const nodeColor = node.color || config.color
     const isSelected = selectedNode?.id === node.id
@@ -104,9 +113,8 @@ const renderNode = (node, index) => {
         {(provided, snapshot) => (
           <motion.div
             ref={provided.innerRef}
-            className={`absolute cursor-move select-none ${
-              snapshot.isDragging ? 'z-50' : 'z-10'
-            }`}
+            className={`absolute cursor-move select-none ${snapshot.isDragging ? 'z-50' : 'z-10'
+              }`}
             style={{
               left: node.x,
               top: node.y,
@@ -138,17 +146,17 @@ const renderNode = (node, index) => {
               `}
               style={{ backgroundColor: nodeColor + '20', borderColor: nodeColor }}
             >
-<div className="flex items-center justify-center mb-2">
-                <ApperIcon 
-                  name={config.icon} 
-                  className="w-6 h-6" 
+              <div className="flex items-center justify-center mb-2">
+                <ApperIcon
+                  name={config.icon}
+                  className="w-6 h-6"
                   style={{ color: nodeColor }}
                 />
               </div>
               <div className="text-sm font-medium text-center text-gray-800">
                 {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
               </div>
-              
+
               {/* Multi-selection indicator */}
               {isMultiSelected && !isSelected && (
                 <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
@@ -164,13 +172,13 @@ const renderNode = (node, index) => {
 
   const renderConnection = (connection, index) => {
     if (!diagram?.nodes) return null
-    
+
     const sourceNode = diagram.nodes.find(n => n.id === connection.sourceId)
     const targetNode = diagram.nodes.find(n => n.id === connection.targetId)
-    
+
     if (!sourceNode || !targetNode) return null
 
-const path = `M ${sourceNode.x} ${sourceNode.y} Q ${(sourceNode.x + targetNode.x) / 2} ${sourceNode.y - 50} ${targetNode.x} ${targetNode.y}`
+    const path = `M ${sourceNode.x} ${sourceNode.y} Q ${(sourceNode.x + targetNode.x) / 2} ${sourceNode.y - 50} ${targetNode.x} ${targetNode.y}`
 
     return (
       <motion.g
@@ -191,16 +199,16 @@ const path = `M ${sourceNode.x} ${sourceNode.y} Q ${(sourceNode.x + targetNode.x
             <polygon points="0 0, 10 3.5, 0 7" fill="#6b7280" />
           </marker>
         </defs>
-        
+
         <path
           d={path}
           className="connection-line"
           markerEnd="url(#arrowhead)"
         />
-        
+
         {connection.label && (
           <text
-x={(sourceNode.x + targetNode.x) / 2}
+            x={(sourceNode.x + targetNode.x) / 2}
             y={sourceNode.y - 40}
             textAnchor="middle"
             className="text-xs fill-gray-600 font-medium"
@@ -215,22 +223,22 @@ x={(sourceNode.x + targetNode.x) / 2}
 
   const handleFitToScreen = () => {
     if (!diagram?.nodes || diagram.nodes.length === 0) return
-    
+
     const padding = 100
-const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
+    const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
     const maxX = Math.max(...diagram.nodes.map(n => n.x)) + padding
     const minY = Math.min(...diagram.nodes.map(n => n.y)) - padding
     const maxY = Math.max(...diagram.nodes.map(n => n.y)) + padding
-    
+
     const contentWidth = maxX - minX
     const contentHeight = maxY - minY
     const canvasWidth = canvasRef.current?.clientWidth || 800
     const canvasHeight = canvasRef.current?.clientHeight || 600
-    
+
     const scaleX = canvasWidth / contentWidth
     const scaleY = canvasHeight / contentHeight
     const newZoom = Math.min(scaleX, scaleY, 1)
-    
+
     setZoom(newZoom)
     setPan({
       x: (canvasWidth - contentWidth * newZoom) / 2 - minX * newZoom,
@@ -249,7 +257,7 @@ const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
         >
           <ApperIcon name="ZoomIn" className="w-4 h-4 text-gray-600" />
         </button>
-        
+
         <button
           onClick={() => setZoom(prev => Math.max(0.5, prev - 0.1))}
           className="p-2 hover:bg-gray-100 rounded-md transition-colors"
@@ -257,7 +265,7 @@ const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
         >
           <ApperIcon name="ZoomOut" className="w-4 h-4 text-gray-600" />
         </button>
-        
+
         <button
           onClick={handleFitToScreen}
           className="p-2 hover:bg-gray-100 rounded-md transition-colors"
@@ -265,14 +273,14 @@ const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
         >
           <ApperIcon name="Maximize2" className="w-4 h-4 text-gray-600" />
         </button>
-        
+
         <div className="text-xs text-gray-500 px-2 border-l border-gray-200">
           {Math.round(zoom * 100)}%
         </div>
       </div>
 
       {/* Canvas */}
-<DragDropContext onDragEnd={handleDragEnd}>
+      <DragDropContext onDragEnd={handleDragEnd}>
         <svg
           ref={canvasRef}
           className="w-full h-full diagram-canvas cursor-grab active:cursor-grabbing"
@@ -287,17 +295,17 @@ const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
         >
           <g transform={`translate(${pan.x}, ${pan.y}) scale(${zoom})`}>
             {/* Render connections first (behind nodes) */}
-            {diagram?.connections?.map((connection, index) => 
+            {diagram?.connections?.map((connection, index) =>
               renderConnection(connection, index)
             )}
-            
+
             {/* Render nodes with drag and drop */}
-<Droppable droppableId="diagram-canvas" type="NODE">
+            <Droppable droppableId="diagram-canvas" type="NODE">
               {(provided) => (
-                <div 
-                  ref={provided.innerRef} 
+                <div
+                  ref={provided.innerRef}
                   {...provided.droppableProps}
-                  style={{ 
+                  style={{
                     position: 'relative',
                     width: '100%',
                     height: '100%',
@@ -305,7 +313,7 @@ const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
                   }}
                 >
                   <div style={{ pointerEvents: 'auto' }}>
-                    {diagram?.nodes?.map((node, index) => 
+                    {diagram?.nodes?.map((node, index) =>
                       renderNode(node, index)
                     )}
                   </div>
@@ -316,10 +324,10 @@ const minX = Math.min(...diagram.nodes.map(n => n.x)) - padding
           </g>
         </svg>
       </DragDropContext>
-      
+
       {/* Multi-selection info */}
       {selectedNodes.length > 1 && (
-        <motion.div 
+        <motion.div
           className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 shadow-sm"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
