@@ -116,7 +116,10 @@ return (
       <Draggable key={node.id} draggableId={node.id} index={index}>
         {(provided, snapshot) => (
           <motion.div
-            ref={provided.innerRef}
+            ref={(el) => {
+              // Forward ref to both React Beautiful DND and Framer Motion
+              provided.innerRef(el);
+            }}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             initial={{ opacity: 0, scale: 0.8 }}
