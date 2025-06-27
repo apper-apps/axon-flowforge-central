@@ -101,7 +101,8 @@ const DiagramCanvas = ({
     onNodePositionUpdate?.(draggableId, { x: newX, y: newY })
   }, [diagram.nodes, zoom, pan, onNodePositionUpdate])
 
-  const renderNode = (node, index) => {
+// Render SVG node visualization (non-interactive)
+  const renderSVGNode = (node, index) => {
     const config = nodeTypes[node.type] || nodeTypes.process
     const nodeColor = node.color || config.color
     const isSelected = selectedNode?.id === node.id
@@ -109,20 +110,73 @@ const DiagramCanvas = ({
     const isHovered = hoveredNode?.id === node.id
 
     return (
-      <Draggable key={node.id} draggableId={node.id} index={index}>
-        {(provided, snapshot) => (
+      <g key={`svg-${node.id}-${index}`} transform={`translate(${node.x}, ${node.y})`}>
+        <rect
+          width="120"
+          height="60"
+          rx="8"
+          fill={nodeColor + '20'}
+          stroke={isSelected ? '#3b82f6' : isMultiSelected ? '#8b5cf6' : nodeColor}
+          strokeWidth={isSelected || isMultiSelected ? '3' : '2'}
+          className={`transition-all duration-200 ${isHovered ? 'filter drop-shadow-md' : ''}`}
+        />
+        <text
+          x="60"
+          y="35"
+          textAnchor="middle"
+          dominantBaseline="middle"
+          className="text-sm font-medium fill-gray-800 pointer-events-none"
+          style={{ fontSize: '14px' }}
+        >
+          {node.label?.length > 12 ? node.label.substring(0, 12) + '...' : node.label || 'Node'}
+        </text>
+        
+        {/* Multi-selection indicator */}
+        {isMultiSelected && !isSelected && (
+          <circle
+            cx="110"
+            cy="10"
+            r="8"
+            fill="#8b5cf6"
+            className="drop-shadow-sm"
+          />
+        )}
+      </g>
+    )
+  }
+
+  // Render HTML draggable node (interactive layer)
+  const renderDraggableNode = (node, index) => {
+    const config = nodeTypes[node.type] || nodeTypes.process
+    const nodeColor = node.color || config.color
+    const isSelected = selectedNode?.id === node.id
+    const isMultiSelected = selectedNodes?.some(n => n.id === node.id)
+    const isHovered = hoveredNode?.id === node.id
+
+    return (
+      <Draggable
+        key={`draggable-${node.id}-${index}`}
+        draggableId={`node-${node.id}-${index}`}
+        index={index}
+      >
+        {(dragProvided, dragSnapshot) => (
           <motion.div
-            ref={provided.innerRef}
-            className={`absolute cursor-move select-none ${snapshot.isDragging ? 'z-50' : 'z-10'
-              }`}
+            ref={dragProvided.innerRef}
+            {...dragProvided.draggableProps}
+            {...dragProvided.dragHandleProps}
+            className={`absolute cursor-move select-none ${dragSnapshot.isDragging ? 'z-50' : 'z-10'}`}
             style={{
-              left: node.x,
-              top: node.y,
-              transform: `scale(${zoom})`,
-              transformOrigin: 'top left'
+              position: 'absolute',
+              left: (node.x + pan.x) * zoom,
+              top: (node.y + pan.y) * zoom,
+              width: 120 * zoom,
+              height: 60 * zoom,
+              pointerEvents: 'auto',
+              transform: `scale(${dragSnapshot.isDragging ? 0.98 : 1})`,
+              transformOrigin: 'center',
+              ...dragProvided.draggableProps.style
             }}
             whileHover={{ scale: zoom * 1.02 }}
-            whileTap={{ scale: zoom * 0.98 }}
             onMouseEnter={() => setHoveredNode(node)}
             onMouseLeave={() => setHoveredNode(null)}
             onClick={(e) => {
@@ -133,18 +187,19 @@ const DiagramCanvas = ({
                 onNodeSelect?.(node)
               }
             }}
-            {...provided.draggableProps}
-            {...provided.dragHandleProps}
           >
             <div
               className={`
-                relative p-3 rounded-lg border-2 transition-all duration-200 min-w-[120px] text-center
-                ${isSelected ? 'border-blue-500 shadow-lg' : 'border-gray-300'}
-                ${isMultiSelected ? 'border-purple-500 shadow-md' : ''}
+                relative w-full h-full p-3 rounded-lg border-2 transition-all duration-200 min-w-[120px] text-center flex flex-col items-center justify-center
+                ${isSelected ? 'border-blue-500 shadow-lg bg-blue-50' : 'border-gray-300 bg-white'}
+                ${isMultiSelected ? 'border-purple-500 shadow-md bg-purple-50' : ''}
                 ${isHovered ? 'shadow-md' : ''}
-                ${snapshot.isDragging ? 'shadow-xl rotate-2' : ''}
+                ${dragSnapshot.isDragging ? 'shadow-xl rotate-1 bg-gray-50' : ''}
               `}
-              style={{ backgroundColor: nodeColor + '20', borderColor: nodeColor }}
+              style={{ 
+                backgroundColor: dragSnapshot.isDragging ? '#f9fafb' : (nodeColor + '20'), 
+                borderColor: isSelected ? '#3b82f6' : isMultiSelected ? '#8b5cf6' : nodeColor 
+              }}
             >
               <div className="flex items-center justify-center mb-2">
                 <ApperIcon
@@ -154,12 +209,12 @@ const DiagramCanvas = ({
                 />
               </div>
               <div className="text-sm font-medium text-center text-gray-800">
-                {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
+                {node.label?.length > 15 ? node.label.substring(0, 15) + '...' : node.label || 'Node'}
               </div>
 
               {/* Multi-selection indicator */}
               {isMultiSelected && !isSelected && (
-                <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center">
+                <div className="absolute -top-2 -right-2 w-6 h-6 bg-purple-500 rounded-full flex items-center justify-center shadow-sm">
                   <span className="text-white text-xs font-bold">✓</span>
                 </div>
               )}
@@ -280,8 +335,8 @@ const DiagramCanvas = ({
 </div>
 
       {/* Canvas */}
-      <div className="relative w-full h-full">
-        {/* SVG Canvas for rendering */}
+<div className="relative w-full h-full">
+        {/* SVG Canvas for rendering connections and static visual elements */}
         <svg
           ref={canvasRef}
           className="w-full h-full diagram-canvas cursor-grab active:cursor-grabbing absolute inset-0"
@@ -300,51 +355,37 @@ const DiagramCanvas = ({
               renderConnection(connection, index)
             )}
 
-            {/* Render nodes as SVG elements */}
+            {/* Render SVG nodes for visual reference only */}
             {diagram?.nodes?.map((node, index) =>
-              renderNode(node, index)
+              renderSVGNode(node, index)
             )}
           </g>
         </svg>
 
-        {/* HTML Layer for Drag and Drop */}
-        <DragDropContext onDragEnd={handleDragEnd}>
+        {/* HTML Layer for Drag and Drop - React 18 StrictMode compatible */}
+        <DragDropContext 
+          onDragEnd={handleDragEnd}
+          // React 18 StrictMode compatibility
+          enableDefaultSensors={false}
+        >
           <div className="absolute inset-0 pointer-events-none">
-            <Droppable droppableId="diagram-canvas" type="NODE">
-              {(provided) => (
+            <Droppable droppableId="diagram-canvas-droppable" type="NODE">
+              {(provided, snapshot) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
                   className="w-full h-full relative"
                   style={{ pointerEvents: 'none' }}
                 >
-                  {/* Invisible drag handles positioned over SVG nodes */}
-                  {diagram?.nodes?.map((node, index) => (
-                    <Draggable
-                      key={`drag-${node.id || index}`}
-                      draggableId={`node-${node.id || index}`}
-                      index={index}
-                    >
-                      {(dragProvided, dragSnapshot) => (
-                        <div
-                          ref={dragProvided.innerRef}
-                          {...dragProvided.draggableProps}
-                          {...dragProvided.dragHandleProps}
-                          style={{
-                            position: 'absolute',
-                            left: (node.x + pan.x) * zoom,
-                            top: (node.y + pan.y) * zoom,
-                            width: 100 * zoom,
-                            height: 60 * zoom,
-                            pointerEvents: 'auto',
-                            zIndex: dragSnapshot.isDragging ? 1000 : 1,
-                            cursor: 'grab',
-                            ...dragProvided.draggableProps.style
-                          }}
-                        />
-                      )}
-                    </Draggable>
-                  ))}
+                  {/* Interactive draggable nodes */}
+                  {diagram?.nodes?.map((node, index) => {
+                    // Ensure node has required properties
+                    if (!node?.id) {
+                      console.warn(`Node at index ${index} missing id:`, node)
+                      return null
+                    }
+                    return renderDraggableNode(node, index)
+                  })}
                   {provided.placeholder}
                 </div>
               )}
@@ -354,16 +395,17 @@ const DiagramCanvas = ({
       </div>
 
       {/* Multi-selection info */}
-      {selectedNodes.length > 1 && (
+      {selectedNodes?.length > 1 && (
         <motion.div
           className="absolute top-4 left-1/2 transform -translate-x-1/2 bg-blue-50 border border-blue-200 rounded-lg px-4 py-2 shadow-sm"
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0, y: -10 }}
         >
-<div className="flex items-center space-x-2 text-sm text-blue-700">
+          <div className="flex items-center space-x-2 text-sm text-blue-700">
             <ApperIcon name="MousePointer2" className="w-4 h-4" />
             <span>{selectedNodes.length} nodes selected</span>
-            <span className="text-blue-500">•</span>,
+            <span className="text-blue-500">•</span>
             <span className="text-xs">Press Delete to remove, Esc to clear selection</span>
           </div>
         </motion.div>
