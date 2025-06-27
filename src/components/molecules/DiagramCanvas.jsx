@@ -277,13 +277,14 @@ const DiagramCanvas = ({
         <div className="text-xs text-gray-500 px-2 border-l border-gray-200">
           {Math.round(zoom * 100)}%
         </div>
-      </div>
+</div>
 
       {/* Canvas */}
-      <DragDropContext onDragEnd={handleDragEnd}>
+      <div className="relative w-full h-full">
+        {/* SVG Canvas for rendering */}
         <svg
           ref={canvasRef}
-          className="w-full h-full diagram-canvas cursor-grab active:cursor-grabbing"
+          className="w-full h-full diagram-canvas cursor-grab active:cursor-grabbing absolute inset-0"
           onWheel={handleWheel}
           onMouseDown={handleMouseDown}
           onClick={(e) => {
@@ -299,31 +300,58 @@ const DiagramCanvas = ({
               renderConnection(connection, index)
             )}
 
-            {/* Render nodes with drag and drop */}
+            {/* Render nodes as SVG elements */}
+            {diagram?.nodes?.map((node, index) =>
+              renderNode(node, index)
+            )}
+          </g>
+        </svg>
+
+        {/* HTML Layer for Drag and Drop */}
+        <DragDropContext onDragEnd={handleDragEnd}>
+          <div className="absolute inset-0 pointer-events-none">
             <Droppable droppableId="diagram-canvas" type="NODE">
               {(provided) => (
                 <div
                   ref={provided.innerRef}
                   {...provided.droppableProps}
-                  style={{
-                    position: 'relative',
-                    width: '100%',
-                    height: '100%',
-                    pointerEvents: 'none'
-                  }}
+                  className="w-full h-full relative"
+                  style={{ pointerEvents: 'none' }}
                 >
-                  <div style={{ pointerEvents: 'auto' }}>
-                    {diagram?.nodes?.map((node, index) =>
-                      renderNode(node, index)
-                    )}
-                  </div>
+                  {/* Invisible drag handles positioned over SVG nodes */}
+                  {diagram?.nodes?.map((node, index) => (
+                    <Draggable
+                      key={`drag-${node.id || index}`}
+                      draggableId={`node-${node.id || index}`}
+                      index={index}
+                    >
+                      {(dragProvided, dragSnapshot) => (
+                        <div
+                          ref={dragProvided.innerRef}
+                          {...dragProvided.draggableProps}
+                          {...dragProvided.dragHandleProps}
+                          style={{
+                            position: 'absolute',
+                            left: (node.x + pan.x) * zoom,
+                            top: (node.y + pan.y) * zoom,
+                            width: 100 * zoom,
+                            height: 60 * zoom,
+                            pointerEvents: 'auto',
+                            zIndex: dragSnapshot.isDragging ? 1000 : 1,
+                            cursor: 'grab',
+                            ...dragProvided.draggableProps.style
+                          }}
+                        />
+                      )}
+                    </Draggable>
+                  ))}
                   {provided.placeholder}
                 </div>
               )}
             </Droppable>
-          </g>
-        </svg>
-      </DragDropContext>
+          </div>
+        </DragDropContext>
+      </div>
 
       {/* Multi-selection info */}
       {selectedNodes.length > 1 && (
