@@ -112,10 +112,10 @@ const renderNode = (node, index) => {
     const isMultiSelected = selectedNodes.some(n => n.id === node.id)
     const isHovered = hoveredNode === node.id
 
-    return (
+return (
       <Draggable key={node.id} draggableId={node.id} index={index}>
         {(provided, snapshot) => (
-          <motion.g
+          <motion.div
             ref={provided.innerRef}
             {...provided.draggableProps}
             {...provided.dragHandleProps}
@@ -126,7 +126,14 @@ const renderNode = (node, index) => {
               boxShadow: snapshot.isDragging ? '0 8px 16px rgba(0,0,0,0.15)' : 'none'
             }}
             transition={{ delay: index * 0.1, duration: 0.3 }}
-            style={{ cursor: snapshot.isDragging ? 'grabbing' : 'grab' }}
+            style={{ 
+              position: 'absolute',
+              left: node.position.x,
+              top: node.position.y,
+              transform: 'translate(-50%, -50%)',
+              cursor: snapshot.isDragging ? 'grabbing' : 'grab',
+              zIndex: snapshot.isDragging ? 1000 : 1
+            }}
             onClick={(e) => {
               e.stopPropagation()
               if (e.ctrlKey || e.metaKey) {
@@ -138,104 +145,103 @@ const renderNode = (node, index) => {
             onMouseEnter={() => setHoveredNode(node.id)}
             onMouseLeave={() => setHoveredNode(null)}
           >
-{config.shape === 'rectangle' && (
-              <rect
-                x={node.position.x - 60}
-                y={node.position.y - 30}
-                width={120}
-                height={60}
-                rx={8}
-                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                className="node-shape transition-all duration-200"
-                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-              />
-            )}
-{config.shape === 'ellipse' && (
-              <ellipse
-                cx={node.position.x}
-                cy={node.position.y}
-                rx={60}
-                ry={30}
-                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                className="node-shape transition-all duration-200"
-                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-              />
-            )}
-        
-{config.shape === 'diamond' && (
-              <polygon
-                points={`${node.position.x},${node.position.y - 35} ${node.position.x + 70},${node.position.y} ${node.position.x},${node.position.y + 35} ${node.position.x - 70},${node.position.y}`}
-                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                className="node-shape transition-all duration-200"
-                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-              />
-            )}
-        
-{config.shape === 'parallelogram' && (
-              <polygon
-                points={`${node.position.x - 50},${node.position.y - 25} ${node.position.x + 70},${node.position.y - 25} ${node.position.x + 50},${node.position.y + 25} ${node.position.x - 70},${node.position.y + 25}`}
-                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                className="node-shape transition-all duration-200"
-                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-              />
-            )}
-        
-{config.shape === 'circle' && (
-              <circle
-                cx={node.position.x}
-                cy={node.position.y}
-                r={25}
-                fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
-                stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
-                strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
-                className="node-shape transition-all duration-200"
-                filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
-              />
-            )}
-        
-<text
-              x={node.position.x}
-              y={node.position.y}
-              textAnchor="middle"
-              dy="0.35em"
-              className={`text-sm font-medium pointer-events-none transition-all duration-200 ${
-                isSelected || isMultiSelected ? 'fill-blue-700' : 'fill-gray-800'
-              }`}
-              style={{ fontSize: '12px' }}
-            >
-              {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
-            </text>
-            
-            {/* Multi-selection indicator */}
-            {isMultiSelected && !isSelected && (
-              <circle
-                cx={node.position.x + 45}
-                cy={node.position.y - 25}
-                r={8}
-                fill="#3b82f6"
-                className="selection-indicator"
+            <svg width="140" height="70" style={{ overflow: 'visible' }}>
+              {config.shape === 'rectangle' && (
+                <rect
+                  x="10"
+                  y="5"
+                  width="120"
+                  height="60"
+                  rx={8}
+                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                  className="node-shape transition-all duration-200"
+                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+                />
+              )}
+              {config.shape === 'ellipse' && (
+                <ellipse
+                  cx="70"
+                  cy="35"
+                  rx={60}
+                  ry={30}
+                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                  className="node-shape transition-all duration-200"
+                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+                />
+              )}
+              {config.shape === 'diamond' && (
+                <polygon
+                  points="70,0 140,35 70,70 0,35"
+                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                  className="node-shape transition-all duration-200"
+                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+                />
+              )}
+              {config.shape === 'parallelogram' && (
+                <polygon
+                  points="20,10 140,10 120,60 0,60"
+                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                  className="node-shape transition-all duration-200"
+                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+                />
+              )}
+              {config.shape === 'circle' && (
+                <circle
+                  cx="70"
+                  cy="35"
+                  r={25}
+                  fill={isSelected || isMultiSelected ? '#dbeafe' : (isHovered ? '#f8fafc' : '#ffffff')}
+                  stroke={isSelected || isMultiSelected ? '#3b82f6' : (isHovered ? '#64748b' : nodeColor)}
+                  strokeWidth={isSelected || isMultiSelected ? 3 : (isHovered ? 2.5 : 2)}
+                  className="node-shape transition-all duration-200"
+                  filter={snapshot.isDragging ? 'drop-shadow(0 4px 8px rgba(0,0,0,0.15))' : 'none'}
+                />
+              )}
+              <text
+                x="70"
+                y="35"
+                textAnchor="middle"
+                dy="0.35em"
+                className={`text-sm font-medium pointer-events-none transition-all duration-200 ${
+                  isSelected || isMultiSelected ? 'fill-blue-700' : 'fill-gray-800'
+                }`}
+                style={{ fontSize: '12px' }}
               >
-                <text
-                  x={node.position.x + 45}
-                  y={node.position.y - 25}
-                  textAnchor="middle"
-                  dy="0.35em"
-                  className="fill-white text-xs font-bold"
-                  style={{ fontSize: '10px' }}
-                >
-                  ✓
-                </text>
-              </circle>
-            )}
-          </motion.g>
+                {node.label.length > 15 ? node.label.substring(0, 15) + '...' : node.label}
+              </text>
+              
+              {/* Multi-selection indicator */}
+              {isMultiSelected && !isSelected && (
+                <g>
+                  <circle
+                    cx="115"
+                    cy="10"
+                    r={8}
+                    fill="#3b82f6"
+                    className="selection-indicator"
+                  />
+                  <text
+                    x="115"
+                    y="10"
+                    textAnchor="middle"
+                    dy="0.35em"
+                    className="fill-white text-xs font-bold"
+                    style={{ fontSize: '10px' }}
+                  >
+                    ✓
+                  </text>
+                </g>
+              )}
+            </svg>
+          </motion.div>
         )}
       </Draggable>
     )
@@ -371,14 +377,25 @@ const renderNode = (node, index) => {
             )}
             
             {/* Render nodes with drag and drop */}
-            <Droppable droppableId="diagram-canvas" type="NODE">
+<Droppable droppableId="diagram-canvas" type="NODE">
               {(provided) => (
-                <g ref={provided.innerRef} {...provided.droppableProps}>
-                  {diagram?.nodes?.map((node, index) => 
-                    renderNode(node, index)
-                  )}
+                <div 
+                  ref={provided.innerRef} 
+                  {...provided.droppableProps}
+                  style={{ 
+                    position: 'relative',
+                    width: '100%',
+                    height: '100%',
+                    pointerEvents: 'none'
+                  }}
+                >
+                  <div style={{ pointerEvents: 'auto' }}>
+                    {diagram?.nodes?.map((node, index) => 
+                      renderNode(node, index)
+                    )}
+                  </div>
                   {provided.placeholder}
-                </g>
+                </div>
               )}
             </Droppable>
           </g>
