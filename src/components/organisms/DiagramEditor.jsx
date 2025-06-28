@@ -213,7 +213,6 @@ const handleClearCanvas = () => {
         onCanvasClick={handleCanvasClick}
         onNodePositionUpdate={onNodePositionUpdate}
       />
-
 {/* Properties Panel */}
       {showProperties && (selectedNode || selectedNodes.length > 0) && (
         <PropertiesPanel

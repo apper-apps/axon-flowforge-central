@@ -14,13 +14,15 @@ const DiagramCanvas = ({
   onMultiSelect,
   onClearSelection
 }) => {
-  const canvasRef = useRef(null)
+const canvasRef = useRef(null)
   const [zoom, setZoom] = useState(1)
   const [pan, setPan] = useState({ x: 0, y: 0 })
   const [isDragging, setIsDragging] = useState(false)
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 })
   const [draggedNode, setDraggedNode] = useState(null)
   const [hoveredNode, setHoveredNode] = useState(null)
+  const [collisionDetected, setCollisionDetected] = useState(false)
+  
   // Node type configurations
   const nodeTypes = {
     start: { shape: 'ellipse', color: '#10b981', icon: 'Play' },
@@ -87,18 +89,30 @@ const DiagramCanvas = ({
     return () => document.removeEventListener('keydown', handleKeyDown)
   }, [selectedNodes, onNodeSelect, onClearSelection])
 
-  // Handle drag end for node repositioning
+// Handle drag end for node repositioning
   const handleDragEnd = useCallback((result) => {
     if (!result.destination) return
 
     const { draggableId } = result
-    const node = diagram.nodes.find(n => n.id === draggableId)
+    const nodeId = draggableId.replace('node-', '').split('-')[0]
+    const node = diagram.nodes.find(n => n.id === nodeId)
     if (!node) return
 
-    const newX = snapToGrid((result.destination.x / zoom) - pan.x)
-    const newY = snapToGrid((result.destination.y / zoom) - pan.y)
+    const rect = canvasRef.current?.getBoundingClientRect()
+    if (!rect) return
 
-    onNodePositionUpdate?.(draggableId, { x: newX, y: newY })
+    const newX = Math.round((result.destination.x - pan.x) / zoom)
+    const newY = Math.round((result.destination.y - pan.y) / zoom)
+    
+    const snappedPosition = snapToGrid({ x: newX, y: newY })
+    
+    // Check for collisions and find valid position
+    const { findNearestValidPosition, validateNodeBounds } = require('@/utils/diagramUtils')
+    const validPosition = findNearestValidPosition(snappedPosition, diagram.nodes, nodeId)
+    const boundedPosition = validateNodeBounds(validPosition)
+
+    onNodePositionUpdate?.(nodeId, boundedPosition)
+    setCollisionDetected(false)
   }, [diagram.nodes, zoom, pan, onNodePositionUpdate])
 
 // Render SVG node visualization (non-interactive)
@@ -362,9 +376,13 @@ const DiagramCanvas = ({
           </g>
         </svg>
 
-        {/* HTML Layer for Drag and Drop - React 18 StrictMode compatible */}
+{/* HTML Layer for Drag and Drop - React 18 StrictMode compatible */}
         <DragDropContext 
           onDragEnd={handleDragEnd}
+          onDragStart={(start) => {
+            const nodeId = start.draggableId.replace('node-', '').split('-')[0]
+            setDraggedNode(nodeId)
+          }}
           // React 18 StrictMode compatibility
           enableDefaultSensors={false}
         >
@@ -379,12 +397,20 @@ const DiagramCanvas = ({
                 >
                   {/* Interactive draggable nodes */}
                   {diagram?.nodes?.map((node, index) => {
-                    // Ensure node has required properties
+                    // Ensure node has required properties and position
                     if (!node?.id) {
                       console.warn(`Node at index ${index} missing id:`, node)
                       return null
                     }
-                    return renderDraggableNode(node, index)
+                    
+                    // Ensure node has proper position properties
+                    const nodeWithPosition = {
+                      ...node,
+                      x: node.position?.x || node.x || 100,
+                      y: node.position?.y || node.y || 100
+                    }
+                    
+                    return renderDraggableNode(nodeWithPosition, index)
                   })}
                   {provided.placeholder}
                 </div>

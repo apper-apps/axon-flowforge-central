@@ -5,10 +5,12 @@ export const calculateNodePosition = (index, totalNodes, containerWidth = 1200, 
   const col = index % cols
   const row = Math.floor(index / cols)
   
-  const marginX = 100
-  const marginY = 100
-  const spacingX = (containerWidth - 2 * marginX) / Math.max(1, cols - 1)
-  const spacingY = (containerHeight - 2 * marginY) / Math.max(1, rows - 1)
+  const marginX = 120  // Increased margin for better spacing
+  const marginY = 120
+  const minSpacingX = 180  // Minimum spacing between nodes
+  const minSpacingY = 120
+  const spacingX = Math.max(minSpacingX, (containerWidth - 2 * marginX) / Math.max(1, cols - 1))
+  const spacingY = Math.max(minSpacingY, (containerHeight - 2 * marginY) / Math.max(1, rows - 1))
   
   return {
     x: marginX + col * spacingX,
@@ -173,5 +175,59 @@ export const snapToGrid = (position, gridSize = 20) => {
   return {
     x: Math.round(position.x / gridSize) * gridSize,
     y: Math.round(position.y / gridSize) * gridSize
+  }
+}
+
+// Collision detection and overlap prevention
+export const checkNodeCollision = (position, existingNodes, nodeId = null, nodeWidth = 120, nodeHeight = 60) => {
+  const buffer = 20 // Minimum spacing between nodes
+  
+  return existingNodes.some(node => {
+    if (nodeId && node.id === nodeId) return false // Don't check against self
+    
+    const nodePos = node.position || { x: node.x || 0, y: node.y || 0 }
+    
+    return (
+      position.x < nodePos.x + nodeWidth + buffer &&
+      position.x + nodeWidth + buffer > nodePos.x &&
+      position.y < nodePos.y + nodeHeight + buffer &&
+      position.y + nodeHeight + buffer > nodePos.y
+    )
+  })
+}
+
+export const findNearestValidPosition = (targetPosition, existingNodes, nodeId = null, containerWidth = 1200, containerHeight = 800) => {
+  const nodeWidth = 120
+  const nodeHeight = 60
+  const stepSize = 20
+  const maxAttempts = 50
+  
+  let bestPosition = { ...targetPosition }
+  let attempt = 0
+  
+  // Try positions in expanding spiral pattern
+  while (attempt < maxAttempts) {
+    const radius = Math.floor(attempt / 8) * stepSize
+    const angle = (attempt % 8) * (Math.PI / 4)
+    
+    const testPosition = {
+      x: Math.max(20, Math.min(containerWidth - nodeWidth - 20, targetPosition.x + radius * Math.cos(angle))),
+      y: Math.max(20, Math.min(containerHeight - nodeHeight - 20, targetPosition.y + radius * Math.sin(angle)))
+    }
+    
+    if (!checkNodeCollision(testPosition, existingNodes, nodeId, nodeWidth, nodeHeight)) {
+      return testPosition
+    }
+    
+    attempt++
+  }
+  
+  return bestPosition // Return original if no valid position found
+}
+
+export const validateNodeBounds = (position, containerWidth = 1200, containerHeight = 800, nodeWidth = 120, nodeHeight = 60) => {
+  return {
+    x: Math.max(20, Math.min(containerWidth - nodeWidth - 20, position.x)),
+    y: Math.max(20, Math.min(containerHeight - nodeHeight - 20, position.y))
   }
 }

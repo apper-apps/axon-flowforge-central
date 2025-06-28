@@ -33,6 +33,19 @@ const handleGenerate = async (prompt) => {
     }
   }
 
+  const handleNodePositionUpdate = (nodeId, newPosition) => {
+    if (!diagram) return
+    
+    setDiagram(prevDiagram => ({
+      ...prevDiagram,
+      nodes: prevDiagram.nodes.map(node =>
+        node.id === nodeId 
+          ? { ...node, position: newPosition, x: newPosition.x, y: newPosition.y }
+          : node
+      )
+    }))
+  }
+
   const handleConfirmGeneration = async () => {
     setShowConfirmation(false)
     setLoading(true)
@@ -203,6 +216,7 @@ const handleGenerate = async (prompt) => {
                 onRetry={handleRetry}
                 onPromptFocus={handlePromptFocus}
                 onNodeUpdate={handleNodeUpdate}
+                onNodePositionUpdate={handleNodePositionUpdate}
                 onClearCanvas={handleClearCanvas}
               />
             </div>

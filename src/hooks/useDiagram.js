@@ -54,13 +54,24 @@ const updateNode = useCallback((nodeId, nodeData) => {
     })
   }, [diagram])
 
-  const updateNodePosition = useCallback((nodeId, newPosition) => {
+const updateNodePosition = useCallback((nodeId, newPosition) => {
     if (!diagram || !nodeId || !newPosition) return
 
     setDiagram(prevDiagram => {
+      const { findNearestValidPosition, validateNodeBounds } = require('@/utils/diagramUtils')
+      
+      // Validate position doesn't overlap with other nodes
+      const validPosition = findNearestValidPosition(newPosition, prevDiagram.nodes, nodeId)
+      const boundedPosition = validateNodeBounds(validPosition)
+      
       const updatedNodes = prevDiagram.nodes.map(node =>
         node.id === nodeId 
-          ? { ...node, position: { x: newPosition.x, y: newPosition.y } }
+          ? { 
+              ...node, 
+              position: boundedPosition,
+              x: boundedPosition.x,
+              y: boundedPosition.y
+            }
           : node
       )
 
